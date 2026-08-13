@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B1H4 · 문서 변환기</title>
+<meta name="description" content="B1H4 — 한글·워드·PDF 등 문서를 끌어다 놓으면 마크다운으로 바꿔주는 변환기">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%235aa8f2'/%3E%3Cstop offset='1' stop-color='%234fd8a8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Cpath d='M20 30l8 8 16-16' stroke='white' stroke-width='6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+  :root {
+    --white: #ffffff;
+    --sky: #8ec9ff;
+    --sky-strong: #4f9ce8;
+    --sky-soft: #eaf5ff;
+    --mint: #8ff0cf;
+    --mint-strong: #29b389;
+    --mint-soft: #e8fdf5;
+    --coral-strong: #e2564c;
+    --coral-soft: #fff0ef;
+    --plum-strong: #7a63d8;
+    --plum-soft: #f1eeff;
+    --slate-strong: #7b8794;
+    --slate-soft: #eef1f4;
+    --ink: #1d2733;
+    --ink-soft: #4d5a68;
+    --muted: #76828f;
+    --glass: rgba(255, 255, 255, .60);
+    --glass-strong: rgba(255, 255, 255, .82);
+    --glass-border: rgba(255, 255, 255, .85);
+    --shadow-soft: 0 10px 34px rgba(90, 140, 190, .14), 0 2px 8px rgba(90, 140, 190, .08);
+    --shadow-lift: 0 20px 48px rgba(90, 140, 190, .22), 0 4px 14px rgba(90, 140, 190, .12);
+    --radius-xl: 28px;
+    --radius-l: 20px;
+    --radius-m: 14px;
+    --radius-s: 10px;
+    --font-kr: "Pretendard Variable", "Pretendard", -apple-system, BlinkMacSystemFont, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    --font-display: "Space Grotesk", "Pretendard Variable", sans-serif;
+    --font-mono: "SF Mono", "D2Coding", ui-monospace, "Consolas", monospace;
+    --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+    --ease-smooth: cubic-bezier(.22, 1, .36, 1);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--white);
+    color: var(--ink);
+    font-family: var(--font-kr);
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; display: block; }
+
+  /* ---------- ambient background ---------- */
+  .aurora { position: fixed; inset: 0; overflow: hidden; z-index: 0; pointer-events: none; }
+  .aurora .orb { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .55; animation: float 20s ease-in-out infinite alternate; }
+  .aurora .sky { top: -12%; left: -10%; width: 48vw; height: 48vw; background: radial-gradient(circle at 30% 30%, var(--sky), transparent 70%); }
+  .aurora .mint { bottom: -14%; right: -10%; width: 52vw; height: 52vw; background: radial-gradient(circle at 70% 70%, var(--mint), transparent 70%); animation-delay: -8s; }
+  @keyframes float { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(3%, 4%) scale(1.05); } }
+
+  /* ---------- topbar ---------- */
+  .topbar {
+    position: sticky; top: 14px; z-index: 50;
+    max-width: 1320px; margin: 14px auto 0; padding: 12px 18px 12px 14px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    background: var(--glass); backdrop-filter: blur(24px) saturate(180%); -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid var(--glass-border); border-radius: 999px; box-shadow: var(--shadow-soft);
+  }
+
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-mark {
+    width: 34px; height: 34px; border-radius: 11px; flex: none; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--sky-strong), var(--mint-strong));
+    box-shadow: 0 6px 16px rgba(90, 170, 210, .35), inset 0 1px 1px rgba(255, 255, 255, .5);
+  }
+  .brand-mark .icon { width: 18px; height: 18px; color: #fff; }
+  .wordmark {
+    font-family: var(--font-display); font-weight: 700; font-size: 21px; letter-spacing: .01em;
+    background: linear-gradient(120deg, var(--sky-strong), var(--mint-strong));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .badge {
+    font-size: 11px; font-weight: 600; letter-spacing: .02em; color: var(--mint-strong);
+    background: var(--mint-soft); padding: 4px 10px; border-radius: 999px;
+  }
+
+  .controls { display: flex; align-items: center; gap: 14px; }
+  .watch-group { display: flex; align-items: center; gap: 8px; }
+
+  .switch { position: relative; width: 46px; height: 27px; display: inline-block; cursor: pointer; flex: none; }
+  .switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .switch .track {
+    position: absolute; inset: 0; border-radius: 999px; background: #e3e9ef;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, .08); transition: background .25s var(--ease-smooth);
+  }
+  .switch .thumb {
+    position: absolute; top: 3px; left: 3px; width: 21px; height: 21px; border-radius: 50%;
+    background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .2); transition: transform .3s var(--ease-spring);
+  }
+  .switch input:checked + .track { background: linear-gradient(120deg, var(--sky-strong), var(--mint-strong)); }
+  .switch input:checked + .track .thumb { transform: translateX(19px); }
+  .switch input:focus-visible + .track { outline: 2px solid var(--sky-strong); outline-offset: 2px; }
+
+  #watchLabel { font-size: 12.5px; font-weight: 600; color: var(--ink-soft); white-space: nowrap; }
+
+  .btn {
+    font-family: var(--font-kr); font-weight: 600; font-size: 13px; padding: 9px 17px;
+    border-radius: 999px; border: 1px solid transparent; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+    transition: transform .18s var(--ease-spring), box-shadow .2s ease, background .2s ease;
+  }
+  .btn:active { transform: scale(.94); }
+  .btn.ghost {
+    background: var(--glass-strong); border: 1px solid var(--glass-border); color: var(--ink-soft);
+    backdrop-filter: blur(14px);
+  }
+  .btn.ghost:hover { background: #fff; color: var(--ink); box-shadow: var(--shadow-soft); }
+  .btn .icon { width: 15px; height: 15px; }
+
+  /* ---------- hero ---------- */
+  .hero { max-width: 640px; margin: 40px auto 6px; padding: 0 20px; text-align: center; position: relative; z-index: 1; }
+  .hero h1 {
+    font-family: var(--font-display); font-weight: 700; font-size: clamp(24px, 3.6vw, 36px);
+    line-height: 1.3; letter-spacing: -.01em; margin: 0; color: var(--ink);
+  }
+  .hero h1 .grad {
+    background: linear-gradient(120deg, var(--sky-strong), var(--mint-strong));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero p { margin: 12px 0 0; color: var(--ink-soft); font-size: 14.5px; }
+
+  /* ---------- bento board ---------- */
+  .board {
+    position: relative; z-index: 1; max-width: 1320px; margin: 28px auto 60px; padding: 0 20px;
+    display: grid; gap: 18px;
+    grid-template-columns: 1.15fr 1fr 1fr;
+    grid-template-areas:
+      "drop output done"
+      "drop log failed"
+      "formats formats formats"
+      "settings settings settings";
+  }
+  .card--drop { grid-area: drop; }
+  .card--output { grid-area: output; }
+  .card--done { grid-area: done; }
+  .card--log { grid-area: log; }
+  .card--failed { grid-area: failed; }
+  .card--formats { grid-area: formats; }
+  .card--settings { grid-area: settings; }
+
+  .card {
+    position: relative; background: var(--glass); backdrop-filter: blur(22px) saturate(180%); -webkit-backdrop-filter: blur(22px) saturate(180%);
+    border: 1px solid var(--glass-border); border-radius: var(--radius-xl);
+    padding: 22px 22px 24px; box-shadow: var(--shadow-soft); overflow: hidden;
+    transition: box-shadow .3s var(--ease-smooth), transform .3s var(--ease-smooth);
+    animation: cardIn .5s var(--ease-smooth) both;
+  }
+  .card::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .75), rgba(255, 255, 255, 0) 42%);
+  }
+  .card:hover { box-shadow: var(--shadow-lift); transform: translateY(-2px); }
+  .board > .card:nth-child(1) { animation-delay: .02s; }
+  .board > .card:nth-child(2) { animation-delay: .08s; }
+  .board > .card:nth-child(3) { animation-delay: .14s; }
+  .board > .card:nth-child(4) { animation-delay: .2s; }
+  .board > .card:nth-child(5) { animation-delay: .26s; }
+  .board > .card:nth-child(6) { animation-delay: .32s; }
+  @keyframes cardIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+  .panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; position: relative; z-index: 1; }
+  .panel-head h2 {
+    font-family: var(--font-display); font-size: 12.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+    margin: 0; color: var(--ink-soft); display: flex; align-items: center; gap: 8px;
+  }
+  .panel-head h2 .icon { width: 16px; height: 16px; color: var(--sky-strong); }
+  .count {
+    font-family: var(--font-mono); font-size: 11.5px; color: var(--muted);
+    background: rgba(140, 170, 200, .14); padding: 3px 10px; border-radius: 999px;
+  }
+
+  /* ---------- drop area ---------- */
+  .drop-area {
+    border: 1.6px dashed rgba(79, 156, 232, .45); border-radius: var(--radius-l);
+    padding: 26px 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
+    cursor: pointer; margin-bottom: 16px; position: relative; z-index: 1;
+    background: linear-gradient(160deg, rgba(142, 201, 255, .08), rgba(143, 240, 207, .08));
+    transition: border-color .25s var(--ease-smooth), background .25s var(--ease-smooth), transform .25s var(--ease-smooth);
+  }
+  .drop-area:hover { border-color: var(--sky-strong); background: linear-gradient(160deg, rgba(142, 201, 255, .16), rgba(143, 240, 207, .16)); }
+  .card--drop.drag-over .drop-area {
+    border-color: var(--mint-strong); transform: scale(1.015);
+    background: linear-gradient(160deg, rgba(142, 201, 255, .26), rgba(143, 240, 207, .3));
+    box-shadow: 0 0 0 6px rgba(143, 240, 207, .18);
+  }
+  .drop-area .icon { width: 32px; height: 32px; color: var(--sky-strong); }
+  .drop-area p { margin: 0; font-size: 13.5px; font-weight: 600; color: var(--ink-soft); }
+  .drop-area .sub { font-size: 11.5px; color: var(--muted); font-weight: 400; }
+  .drop-area .pill-btn {
+    margin-top: 4px; font-size: 12px; font-weight: 600; color: var(--sky-strong);
+    background: var(--sky-soft); padding: 6px 14px; border-radius: 999px;
+  }
+
+  /* ---------- file lists ---------- */
+  ul.files { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto; position: relative; z-index: 1; }
+  ul.files.tall { max-height: 380px; }
+  ul.files::-webkit-scrollbar, ul.log::-webkit-scrollbar { width: 6px; }
+  ul.files::-webkit-scrollbar-thumb, ul.log::-webkit-scrollbar-thumb { background: rgba(140, 170, 200, .35); border-radius: 999px; }
+
+  li.file {
+    display: flex; align-items: center; gap: 10px; padding: 9px 11px;
+    border-radius: var(--radius-m); background: rgba(255, 255, 255, .55); border: 1px solid rgba(255, 255, 255, .75);
+    box-shadow: 0 2px 8px rgba(90, 140, 190, .06);
+    transition: transform .2s var(--ease-spring), box-shadow .2s ease, background .2s ease;
+    animation: settle .3s var(--ease-smooth);
+  }
+  @keyframes settle { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+  li.file.leaving { animation: leave .22s ease-in forwards; pointer-events: none; }
+  @keyframes leave { to { opacity: 0; transform: translateY(-6px) scale(.98); } }
+  li.file:hover { transform: translateX(2px); box-shadow: 0 4px 14px rgba(90, 140, 190, .14); }
+  li.file.clickable { cursor: pointer; }
+  li.file.clickable:hover { background: rgba(234, 245, 255, .75); }
+
+  .fico { width: 30px; height: 30px; border-radius: 10px; flex: none; display: grid; place-items: center; background: var(--sky-soft); color: var(--sky-strong); }
+  .fico .icon { width: 16px; height: 16px; }
+  li.file.working { border-left: 3px solid var(--sky-strong); }
+  li.file.working .fico { animation: breathe 1.7s ease-in-out infinite; }
+  li.file.done .fico { background: var(--mint-soft); color: var(--mint-strong); }
+  li.file.bad .fico { background: var(--coral-soft); color: var(--coral-strong); }
+  @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+  li.file .name { flex: 1; min-width: 0; font-size: 13px; font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  li.file .meta { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+  li.file .trail { flex: none; color: var(--muted); }
+  li.file .trail .icon { width: 15px; height: 15px; }
+  li.file.clickable:hover .trail { color: var(--sky-strong); }
+
+  /* ---------- 형식 표시 (파일 배지 · 지원 형식 칩) ---------- */
+  li.file .ftag {
+    flex: none; font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: .02em;
+    text-transform: uppercase; padding: 3px 7px; border-radius: 7px;
+    background: var(--slate-soft); color: var(--slate-strong);
+  }
+  [data-group="한글"] .ftag, .chip[data-group="한글"] .dot { background: var(--sky-soft); color: var(--sky-strong); }
+  [data-group="오피스"] .ftag, .chip[data-group="오피스"] .dot { background: var(--plum-soft); color: var(--plum-strong); }
+  [data-group="PDF"] .ftag, .chip[data-group="PDF"] .dot { background: var(--coral-soft); color: var(--coral-strong); }
+  [data-group="텍스트"] .ftag, .chip[data-group="텍스트"] .dot { background: var(--mint-soft); color: var(--mint-strong); }
+  li.file[data-group="한글"] .fico { background: var(--sky-soft); color: var(--sky-strong); }
+  li.file[data-group="오피스"] .fico { background: var(--plum-soft); color: var(--plum-strong); }
+  li.file[data-group="PDF"] .fico { background: var(--coral-soft); color: var(--coral-strong); }
+  li.file[data-group="텍스트"] .fico { background: var(--mint-soft); color: var(--mint-strong); }
+  li.file.done .fico, li.file.bad .fico { background: var(--mint-soft); color: var(--mint-strong); }
+  li.file.bad .fico { background: var(--coral-soft); color: var(--coral-strong); }
+
+  .fmt-groups { display: flex; flex-wrap: wrap; gap: 18px 26px; position: relative; z-index: 1; }
+  .fmt-group { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .fmt-group .gname { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .fmt-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 999px;
+    background: rgba(255, 255, 255, .6); border: 1px solid rgba(255, 255, 255, .8);
+    box-shadow: 0 2px 8px rgba(90, 140, 190, .06); font-size: 12px; color: var(--ink);
+  }
+  .chip .dot { width: 16px; height: 16px; border-radius: 5px; flex: none; display: grid; place-items: center;
+    font-family: var(--font-mono); font-size: 8px; font-weight: 700; background: var(--slate-soft); color: var(--slate-strong); }
+  .chip .ext { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); }
+  .chip .why { font-size: 11px; color: var(--coral-strong); }
+  .chip.off { background: rgba(255, 255, 255, .35); color: var(--muted); border-style: dashed; }
+  .chip.off .dot { background: var(--slate-soft); color: var(--slate-strong); }
+  .fmt-note { margin: 14px 0 0; font-size: 11.5px; color: var(--muted); position: relative; z-index: 1; }
+
+  .opts { display: flex; flex-direction: column; gap: 10px; }
+  .opt { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--ink-soft); }
+  .opt .switch { width: 38px; height: 22px; }
+  .opt .switch .thumb { width: 16px; height: 16px; }
+  .opt .switch input:checked + .track .thumb { transform: translateX(16px); }
+  .opt label { cursor: pointer; }
+
+  .empty {
+    display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
+    padding: 22px 10px; color: var(--muted); font-size: 12.5px; margin-top: 6px;
+    border-top: 1px dashed rgba(140, 170, 200, .25); position: relative; z-index: 1;
+  }
+  .empty[hidden] { display: none; }
+  .empty .icon { width: 24px; height: 24px; color: rgba(79, 156, 232, .4); }
+  .empty strong { color: var(--ink-soft); font-size: 12.5px; font-weight: 600; }
+
+  /* ---------- tally + log ---------- */
+  .tally { display: flex; gap: 10px; margin-bottom: 16px; position: relative; z-index: 1; }
+  .tally .tile {
+    flex: 1; padding: 13px 15px; border-radius: var(--radius-m); border: 1px solid rgba(255, 255, 255, .7);
+    background: linear-gradient(160deg, rgba(142, 201, 255, .16), rgba(143, 240, 207, .12));
+  }
+  .tally .tile.bad { background: linear-gradient(160deg, rgba(226, 86, 76, .14), rgba(255, 255, 255, .3)); }
+  .tally .n { font-family: var(--font-display); font-size: 24px; font-weight: 700; line-height: 1.1; color: var(--ink); }
+  .tally .tile.bad .n { color: var(--coral-strong); }
+  .tally .k { display: block; margin-top: 2px; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+  ul.log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 230px; overflow-y: auto; position: relative; z-index: 1; }
+  .log li { display: flex; gap: 9px; align-items: flex-start; padding: 8px 10px; border-radius: var(--radius-s); background: rgba(255, 255, 255, .5); font-family: var(--font-mono); font-size: 11.5px; }
+  .log .dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 5px; flex: none; background: var(--sky-strong); }
+  .log li[data-level="ok"] .dot { background: var(--mint-strong); }
+  .log li[data-level="error"] .dot { background: var(--coral-strong); }
+  .log .t { color: var(--muted); flex: none; }
+  .log .m { min-width: 0; word-break: break-word; color: var(--ink-soft); }
+  .log li[data-level="ok"] .m { color: var(--ink); }
+  .log li[data-level="error"] .m { color: var(--coral-strong); }
+
+  /* ---------- settings ---------- */
+  .settings-grid { display: grid; grid-template-columns: 1.2fr .9fr 1fr; gap: 26px; position: relative; z-index: 1; }
+  .setting { display: flex; flex-direction: column; gap: 6px; }
+  .setting label { font-size: 11px; font-weight: 600; letter-spacing: .04em; color: var(--muted); }
+  .setting input {
+    font-family: var(--font-mono); font-size: 12.5px; padding: 11px 14px; color: var(--ink);
+    background: rgba(255, 255, 255, .6); border: 1px solid rgba(140, 170, 200, .25); border-radius: var(--radius-m);
+    backdrop-filter: blur(10px); transition: border-color .2s ease, box-shadow .2s ease;
+  }
+  .setting input:focus-visible { outline: none; border-color: var(--sky-strong); box-shadow: 0 0 0 4px rgba(142, 201, 255, .25); }
+  .setting .hint { font-size: 11px; color: var(--muted); }
+
+  .paths { display: flex; flex-direction: column; gap: 6px; }
+  .paths .prow {
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--radius-s);
+    background: rgba(255, 255, 255, .45); font-family: var(--font-mono); font-size: 11px; color: var(--ink-soft);
+  }
+  .paths .prow .icon { width: 14px; height: 14px; color: var(--sky-strong); flex: none; }
+  .paths .prow .k { color: var(--muted); flex: none; min-width: 44px; }
+  .paths .prow .v { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  @media (max-width: 1180px) {
+    .board { grid-template-columns: 1fr 1fr; grid-template-areas: "drop drop" "output done" "log failed" "formats formats" "settings settings"; }
+  }
+  @media (max-width: 760px) {
+    .board { grid-template-columns: 1fr; grid-template-areas: "drop" "output" "done" "log" "failed" "formats" "settings"; }
+    .topbar { border-radius: var(--radius-xl); justify-content: center; }
+    .settings-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- dialog ---------- */
+  dialog {
+    border: none; border-radius: 26px; padding: 0; max-width: 820px; width: 92vw;
+    background: rgba(255, 255, 255, .9); backdrop-filter: blur(30px) saturate(180%);
+    box-shadow: 0 30px 80px rgba(60, 90, 130, .35); color: var(--ink);
+  }
+  dialog[open] { animation: sheetIn .3s var(--ease-smooth); }
+  @keyframes sheetIn { from { opacity: 0; transform: translateY(16px) scale(.98); } to { opacity: 1; transform: none; } }
+  dialog::backdrop { background: rgba(20, 30, 45, .35); backdrop-filter: blur(4px); }
+  dialog .dhead { display: flex; justify-content: space-between; align-items: center; padding: 18px 22px; border-bottom: 1px solid rgba(140, 170, 200, .15); }
+  dialog h3 { font-family: var(--font-display); margin: 0; font-size: 15px; font-weight: 600; }
+  dialog pre { margin: 0; padding: 22px; max-height: 64vh; overflow: auto; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.75; white-space: pre-wrap; color: var(--ink-soft); }
+  .icon-btn {
+    width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; border: none; cursor: pointer;
+    background: rgba(140, 170, 200, .12); color: var(--ink-soft); transition: background .2s ease, transform .18s var(--ease-spring);
+  }
+  .icon-btn:hover { background: rgba(140, 170, 200, .22); }
+  .icon-btn:active { transform: scale(.9); }
+
+  /* ---------- toasts ---------- */
+  .toast-stack { position: fixed; bottom: 22px; right: 22px; display: flex; flex-direction: column; gap: 10px; z-index: 200; max-width: 340px; }
+  .toast {
+    display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: var(--radius-l);
+    background: var(--glass-strong); backdrop-filter: blur(20px) saturate(180%); border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-lift); font-size: 12.5px; color: var(--ink-soft);
+    animation: toastIn .35s var(--ease-spring);
+  }
+  .toast .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--sky-strong); }
+  .toast.ok .dot { background: var(--mint-strong); }
+  .toast.error .dot { background: var(--coral-strong); }
+  .toast.out { animation: toastOut .3s var(--ease-smooth) forwards; }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(10px) scale(.95); } to { opacity: 1; transform: none; } }
+  @keyframes toastOut { to { opacity: 0; transform: translateY(8px) scale(.96); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<svg style="display:none" aria-hidden="true">
+  <symbol id="i-doc-check" viewBox="0 0 24 24"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M14 3v4h4"/><path d="m9 14 2 2 4-4.5"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M14 3v4h4"/><path d="M9 13h6M9 16.5h6"/></symbol>
+  <symbol id="i-cloud-upload" viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 0 0 .8-7.92A5.5 5.5 0 0 0 7.28 8.02 4 4 0 0 0 7 18Z"/><path d="M12 12v6"/><path d="m9.5 14.5 2.5-2.5 2.5 2.5"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M4 12h4l2 3h4l2-3h4"/><path d="M5 6h14l1 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6l1-6Z"/></symbol>
+  <symbol id="i-archive" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1.2"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"/><path d="M10 13h4"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1.1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-alert-triangle" viewBox="0 0 24 24"><path d="M10.6 4.2 2.9 18a1.8 1.8 0 0 0 1.6 2.7h15a1.8 1.8 0 0 0 1.6-2.7L13.4 4.2a1.8 1.8 0 0 0-2.8 0Z"/><path d="M12 9.5v4"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h13M21 18h-1"/><circle cx="13" cy="6" r="2"/><circle cx="7" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></symbol>
+  <symbol id="i-shapes" viewBox="0 0 24 24"><path d="M12 3.5 16.5 11h-9L12 3.5Z"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.4"/><circle cx="17" cy="17" r="3.5"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11A8 8 0 0 0 6.3 6.3L4 8.6"/><path d="M4 4v4.6h4.6"/><path d="M4 13a8 8 0 0 0 13.7 4.7L20 15.4"/><path d="M20 20v-4.6h-4.6"/></symbol>
+</svg>
+
+<div class="aurora" aria-hidden="true"><span class="orb sky"></span><span class="orb mint"></span></div>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark"><svg class="icon"><use href="#i-doc-check"/></svg></span>
+    <span class="wordmark">B1H4</span>
+    <span class="badge">문서 변환기</span>
+  </div>
+  <div class="controls">
+    <div class="watch-group">
+      <label class="switch">
+        <input type="checkbox" id="watchToggle">
+        <span class="track"><span class="thumb"></span></span>
+      </label>
+      <span id="watchLabel">감시 시작</span>
+    </div>
+    <button id="now" class="btn ghost"><svg class="icon"><use href="#i-refresh"/></svg>지금 변환</button>
+  </div>
+</header>
+
+<section class="hero">
+  <h1>한글·워드·PDF를 마크다운으로,<br><span class="grad">끌어다 놓기만</span> 하면 됩니다.</h1>
+  <p>작업전 폴더를 감시하거나, 다운로드한 파일을 바로 끌어다 놓아 변환하세요. 형식이 섞여 있어도 한 번에 처리하고, 원본은 자동으로 작업완료로 이동합니다.</p>
+</section>
+
+<main class="board">
+  <section class="card card--drop" id="dropCard">
+    <div class="panel-head">
+      <h2><svg class="icon"><use href="#i-inbox"/></svg>작업전</h2>
+      <span class="count" id="cPending">0</span>
+    </div>
+    <div class="drop-area" id="dropArea" role="button" tabindex="0" aria-label="파일을 끌어다 놓거나 눌러서 선택">
+      <svg class="icon"><use href="#i-cloud-upload"/></svg>
+      <p>여기로 파일을 끌어다 놓으세요</p>
+      <span class="sub" id="dropHint">한글·워드·엑셀·PDF·텍스트 지원 · 다운로드 폴더에서 바로 드래그해도 됩니다</span>
+      <span class="pill-btn">파일 선택</span>
+      <input type="file" id="fileInput" multiple hidden>
+    </div>
+    <ul class="files tall" id="pending"></ul>
+    <div class="empty" id="pendingEmpty" hidden>
+      <svg class="icon"><use href="#i-inbox"/></svg>
+      <strong>비어 있습니다</strong>
+      파일을 끌어다 놓거나 작업전 폴더에 넣어주세요.
+    </div>
+  </section>
+
+  <section class="card card--output">
+    <div class="panel-head">
+      <h2><svg class="icon"><use href="#i-doc"/></svg>마크다운</h2>
+      <span class="count" id="cOut">0</span>
+    </div>
+    <ul class="files" id="output"></ul>
+    <div class="empty" id="outputEmpty" hidden>
+      <svg class="icon"><use href="#i-doc"/></svg>
+      <strong>결과가 아직 없습니다</strong>
+      변환이 끝나면 여기 쌓이고, 눌러서 볼 수 있습니다.
+    </div>
+  </section>
+
+  <section class="card card--done">
+    <div class="panel-head">
+      <h2><svg class="icon"><use href="#i-archive"/></svg>작업완료</h2>
+      <span class="count" id="cDone">0</span>
+    </div>
+    <ul class="files" id="done"></ul>
+    <div class="empty" id="doneEmpty" hidden>
+      <svg class="icon"><use href="#i-archive"/></svg>
+      <strong>아직 없습니다</strong>
+      변환된 원본이 여기로 옮겨집니다.
+    </div>
+  </section>
+
+  <section class="card card--log">
+    <div class="tally">
+      <div class="tile"><span class="n" id="nOk">0</span><span class="k">변환</span></div>
+      <div class="tile bad"><span class="n" id="nBad">0</span><span class="k">실패</span></div>
+    </div>
+    <div class="panel-head"><h2><svg class="icon"><use href="#i-list"/></svg>기록</h2></div>
+    <ul class="log" id="log"></ul>
+  </section>
+
+  <section class="card card--failed">
+    <div class="panel-head">
+      <h2><svg class="icon"><use href="#i-alert-triangle"/></svg>변환실패</h2>
+      <span class="count" id="cFail">0</span>
+    </div>
+    <ul class="files" id="failed"></ul>
+    <div class="empty" id="failedEmpty" hidden>
+      <svg class="icon"><use href="#i-alert-triangle"/></svg>
+      <strong>실패 없음</strong>
+      문제가 생기면 원본이 여기로 격리됩니다.
+    </div>
+  </section>
+
+  <section class="card card--formats">
+    <div class="panel-head">
+      <h2><svg class="icon"><use href="#i-shapes"/></svg>지원 형식</h2>
+      <span class="count" id="cFormats">0</span>
+    </div>
+    <div class="fmt-groups" id="formats"></div>
+    <p class="fmt-note">점선으로 표시된 형식은 지금 이 컴퓨터에서 변환할 수 없습니다. 옆에 적힌 방법대로 하면 켜집니다.</p>
+  </section>
+
+  <section class="card card--settings">
+    <div class="panel-head"><h2><svg class="icon"><use href="#i-sliders"/></svg>설정</h2></div>
+    <div class="settings-grid">
+      <div class="setting">
+        <label for="bridge">HWP → HWPX 변환 명령 (.hwpx만 쓰면 비워두세요)</label>
+        <input id="bridge" placeholder='rhwp convert "{input}" -o "{output}"' spellcheck="false">
+        <span class="hint">{input}과 {output} 자리에 파일 경로가 들어갑니다. 저장하려면 Enter.</span>
+
+        <label for="maxRows" style="margin-top:14px">시트·표에서 옮길 최대 행 수</label>
+        <input id="maxRows" inputmode="numeric" spellcheck="false">
+        <span class="hint">엑셀·CSV에 적용됩니다. 넘는 행은 잘라내고 결과에 적어둡니다. 저장하려면 Enter.</span>
+      </div>
+      <div class="opts">
+        <div class="opt">
+          <label class="switch"><input type="checkbox" id="optImages"><span class="track"><span class="thumb"></span></span></label>
+          <label for="optImages">그림을 assets 폴더로 꺼내기</label>
+        </div>
+        <div class="opt">
+          <label class="switch"><input type="checkbox" id="optNotes"><span class="track"><span class="thumb"></span></span></label>
+          <label for="optNotes">파워포인트 발표자 노트 포함</label>
+        </div>
+        <div class="opt">
+          <label class="switch"><input type="checkbox" id="optPages"><span class="track"><span class="thumb"></span></span></label>
+          <label for="optPages">PDF 쪽 경계를 주석으로 남기기</label>
+        </div>
+        <div class="opt">
+          <label class="switch"><input type="checkbox" id="optHeadings"><span class="track"><span class="thumb"></span></span></label>
+          <label for="optHeadings">PDF에서 제목 번호로 제목 추정하기</label>
+        </div>
+      </div>
+      <div class="paths" id="paths"></div>
+    </div>
+  </section>
+</main>
+
+<dialog id="viewer">
+  <div class="dhead">
+    <h3 id="vTitle">미리보기</h3>
+    <button id="vClose" class="icon-btn" aria-label="닫기"><svg class="icon"><use href="#i-x"/></svg></button>
+  </div>
+  <pre id="vBody"></pre>
+</dialog>
+
+<div class="toast-stack" id="toasts"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+let bridgeFocused = false;
+let rowsFocused = false;
+
+/* 지원 형식은 서버(core/registry.py)가 유일한 출처다. 화면은 목록을 들고 있지 않고
+   /api/state 가 준 것으로 배지 색, 파일 선택 필터, 업로드 검사를 모두 만든다.
+   그래야 형식을 추가할 때 파이썬 한 곳만 고치면 된다. */
+let formats = [];        // [{group, label, extensions, available, reason, note}]
+let extInfo = new Map(); // ".docx" → 위 항목
+
+function setFormats(list) {
+  formats = list || [];
+  extInfo = new Map();
+  formats.forEach(f => (f.extensions || []).forEach(ext => extInfo.set(ext, f)));
+}
+
+function extOf(name) {
+  const dot = name.lastIndexOf(".");
+  return dot < 0 ? "" : name.slice(dot).toLowerCase();
+}
+
+function kb(n) {
+  if (n < 1024) return n + " B";
+  if (n < 1024 * 1024) return (n / 1024).toFixed(0) + " KB";
+  return (n / 1048576).toFixed(1) + " MB";
+}
+
+function toast(message, level = "info") {
+  const stack = $("toasts");
+  const el = document.createElement("div");
+  el.className = "toast " + level;
+  const dot = document.createElement("span"); dot.className = "dot";
+  const span = document.createElement("span"); span.textContent = message;
+  el.append(dot, span);
+  stack.appendChild(el);
+  setTimeout(() => {
+    el.classList.add("out");
+    setTimeout(() => el.remove(), 320);
+  }, 3400);
+}
+
+function row(f, baseType, icon, clickable) {
+  const li = document.createElement("li");
+  li.dataset.key = f.name;
+  li.className = ["file", baseType, clickable ? "clickable" : ""].filter(Boolean).join(" ");
+  const ext = extOf(f.name);
+  const info = extInfo.get(ext);
+  if (info) li.dataset.group = info.group;
+  const fico = document.createElement("span");
+  fico.className = "fico";
+  fico.innerHTML = `<svg class="icon"><use href="#${icon}"/></svg>`;
+  const name = document.createElement("span");
+  name.className = "name";
+  const tag = document.createElement("span");
+  tag.className = "ftag";
+  tag.textContent = (ext || "?").replace(".", "");
+  const meta = document.createElement("span");
+  meta.className = "meta";
+  li.append(fico, name, tag, meta);
+  if (baseType === "md") {
+    const trail = document.createElement("span");
+    trail.className = "trail";
+    trail.innerHTML = `<svg class="icon"><use href="#i-eye"/></svg>`;
+    li.appendChild(trail);
+  }
+  return li;
+}
+
+function updateRow(li, f, working) {
+  const nameEl = li.querySelector(".name");
+  if (nameEl.textContent !== f.name) nameEl.textContent = f.name;
+  const metaText = kb(f.size) + " · " + f.time;
+  const metaEl = li.querySelector(".meta");
+  if (metaEl.textContent !== metaText) metaEl.textContent = metaText;
+  li.classList.toggle("working", !!working);
+}
+
+/* Keeps existing rows untouched (no re-render, no replayed entrance animation)
+   and only creates DOM nodes for items that are genuinely new, so the
+   "settle" entrance motion plays once per file instead of on every poll. */
+function syncList(listEl, emptyEl, items, baseType, icon, opts = {}) {
+  const byKey = new Map();
+  [...listEl.children].forEach(li => byKey.set(li.dataset.key, li));
+
+  let cursor = listEl.firstChild;
+  items.forEach(f => {
+    const working = opts.statusClass ? opts.statusClass(f) : false;
+    let li = byKey.get(f.name);
+    if (li) {
+      byKey.delete(f.name);
+      updateRow(li, f, working);
+      if (li === cursor) {
+        cursor = cursor.nextSibling;
+      } else {
+        listEl.insertBefore(li, cursor);
+      }
+    } else {
+      li = row(f, baseType, icon, !!opts.click);
+      updateRow(li, f, working);
+      if (opts.click) li.addEventListener("click", () => opts.click(f.name));
+      listEl.insertBefore(li, cursor);
+    }
+  });
+
+  byKey.forEach(li => {
+    li.classList.add("leaving");
+    li.addEventListener("animationend", () => li.remove(), { once: true });
+  });
+
+  if (emptyEl) emptyEl.hidden = items.length > 0;
+}
+
+let formatsSignature = "";
+
+function renderFormats() {
+  /* 1.5초마다 다시 그리면 마우스를 올려둔 설명이 계속 끊긴다.
+     목록이 실제로 바뀌었을 때만 다시 만든다. */
+  const signature = JSON.stringify(formats);
+  if (signature === formatsSignature) return;
+  formatsSignature = signature;
+
+  const holder = $("formats");
+  const groups = [];
+  formats.forEach(f => {
+    let group = groups.find(g => g.name === f.group);
+    if (!group) groups.push((group = { name: f.group, items: [] }));
+    group.items.push(f);
+  });
+
+  holder.replaceChildren(...groups.map(group => {
+    const box = document.createElement("div");
+    box.className = "fmt-group";
+    const title = document.createElement("span");
+    title.className = "gname";
+    title.textContent = group.name;
+    const chips = document.createElement("div");
+    chips.className = "fmt-chips";
+
+    group.items.forEach(f => {
+      const chip = document.createElement("span");
+      chip.className = "chip" + (f.available ? "" : " off");
+      chip.dataset.group = f.group;
+      if (f.note || f.reason) chip.title = f.available ? f.note : f.reason;
+
+      const dot = document.createElement("span");
+      dot.className = "dot";
+      dot.textContent = f.available ? "✓" : "!";
+      const label = document.createElement("span");
+      label.textContent = f.label;
+      const ext = document.createElement("span");
+      ext.className = "ext";
+      ext.textContent = f.extensions.join(" ");
+      chip.append(dot, label, ext);
+
+      if (!f.available && f.reason) {
+        const why = document.createElement("span");
+        why.className = "why";
+        why.textContent = "— " + f.reason;
+        chip.appendChild(why);
+      }
+      chips.appendChild(chip);
+    });
+
+    box.append(title, chips);
+    return box;
+  }));
+
+  $("cFormats").textContent = formats.filter(f => f.available).length;
+}
+
+async function preview(name) {
+  const res = await fetch("/api/preview?name=" + encodeURIComponent(name));
+  if (!res.ok) { toast("미리보기를 불러오지 못했습니다.", "error"); return; }
+  const data = await res.json();
+  $("vTitle").textContent = data.name;
+  $("vBody").textContent = data.text;
+  $("viewer").showModal();
+}
+
+async function refresh() {
+  let s;
+  try { s = await (await fetch("/api/state")).json(); }
+  catch { return; }
+
+  setFormats(s.formats);
+  renderFormats();
+  $("fileInput").accept = s.accept || "";
+  const names = formats.filter(f => f.available).map(f => f.label);
+  $("dropHint").textContent = names.join(" · ") + " 지원 · 다운로드 폴더에서 바로 드래그해도 됩니다";
+
+  const pending = s.pending.map(f => ({ ...f, working: f.name === s.busy }));
+  syncList($("pending"), $("pendingEmpty"), pending, "", "i-doc", { statusClass: f => f.working });
+  syncList($("output"), $("outputEmpty"), s.output, "md", "i-doc", { click: preview });
+  syncList($("done"), $("doneEmpty"), s.done, "done", "i-doc-check");
+  syncList($("failed"), $("failedEmpty"), s.failed_files, "bad", "i-alert-triangle");
+
+  $("cPending").textContent = s.pending.length;
+  $("cOut").textContent = s.output.length;
+  $("cDone").textContent = s.done.length;
+  $("cFail").textContent = s.failed_files.length;
+  $("nOk").textContent = s.processed;
+  $("nBad").textContent = s.failed;
+
+  $("watchToggle").checked = s.watching;
+  $("watchLabel").textContent = s.watching ? "감시 중" : "감시 시작";
+
+  $("log").replaceChildren(...s.logs.map(l => {
+    const li = document.createElement("li");
+    li.dataset.level = l.level;
+    const dot = document.createElement("span"); dot.className = "dot";
+    const t = document.createElement("span"); t.className = "t"; t.textContent = l.time;
+    const m = document.createElement("span"); m.className = "m"; m.textContent = l.message;
+    li.append(dot, t, m);
+    return li;
+  }));
+
+  if (!bridgeFocused) $("bridge").value = s.config.hwp_to_hwpx_command || "";
+  if (!rowsFocused) $("maxRows").value = s.config.sheet_max_rows ?? 2000;
+  $("optImages").checked = s.config.extract_images !== false;
+  $("optNotes").checked = s.config.include_speaker_notes !== false;
+  $("optPages").checked = s.config.pdf_page_marks !== false;
+  $("optHeadings").checked = s.config.pdf_headings !== false;
+
+  $("paths").replaceChildren(...Object.entries(s.paths).map(([k, v]) => {
+    const row = document.createElement("div");
+    row.className = "prow";
+    row.innerHTML = `<svg class="icon"><use href="#i-folder"/></svg><span class="k">${k}</span><span class="v"></span>`;
+    row.querySelector(".v").textContent = v;
+    return row;
+  }));
+}
+
+$("watchToggle").addEventListener("change", async () => {
+  const on = $("watchToggle").checked;
+  await fetch("/api/watch", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ on })
+  });
+  toast(on ? "감시를 시작했습니다." : "감시를 멈췄습니다.", "info");
+  refresh();
+});
+
+$("now").addEventListener("click", async () => {
+  await fetch("/api/scan", { method: "POST" });
+  toast("지금 변환을 실행했습니다.", "info");
+  refresh();
+});
+
+$("bridge").addEventListener("focus", () => bridgeFocused = true);
+$("bridge").addEventListener("blur", () => bridgeFocused = false);
+$("bridge").addEventListener("keydown", async e => {
+  if (e.key !== "Enter") return;
+  await fetch("/api/config", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ hwp_to_hwpx_command: e.target.value })
+  });
+  e.target.blur();
+  toast("설정을 저장했습니다.", "ok");
+  refresh();
+});
+
+async function saveConfig(patch, message) {
+  const res = await fetch("/api/config", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch)
+  });
+  toast(res.ok ? message : "설정을 저장하지 못했습니다.", res.ok ? "ok" : "error");
+  refresh();
+}
+
+[["optImages", "extract_images", "그림 추출"],
+ ["optNotes", "include_speaker_notes", "발표자 노트"],
+ ["optPages", "pdf_page_marks", "PDF 쪽 주석"],
+ ["optHeadings", "pdf_headings", "PDF 제목 추정"]].forEach(([id, key, label]) => {
+  $(id).addEventListener("change", e => {
+    const on = e.target.checked;
+    saveConfig({ [key]: on }, `${label}을(를) ${on ? "켰습니다" : "껐습니다"}.`);
+  });
+});
+
+$("maxRows").addEventListener("focus", () => rowsFocused = true);
+$("maxRows").addEventListener("blur", () => rowsFocused = false);
+$("maxRows").addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  const value = parseInt(e.target.value, 10);
+  if (!Number.isFinite(value) || value < 1) {
+    toast("1 이상의 숫자를 넣어주세요.", "error");
+    return;
+  }
+  e.target.blur();
+  saveConfig({ sheet_max_rows: value }, `최대 ${value}행까지 옮깁니다.`);
+});
+
+$("vClose").addEventListener("click", () => $("viewer").close());
+
+/* ---------- drag & drop upload ---------- */
+async function uploadFiles(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+
+  /* 서버가 알려준 형식만 보낸다. 왜 걸렸는지도 파일마다 그대로 알려준다 —
+     "지원하지 않는 형식"만 뜨면 무엇을 어떻게 고쳐야 할지 알 수 없다. */
+  const valid = [];
+  files.forEach(f => {
+    const info = extInfo.get(extOf(f.name));
+    if (info && info.available) valid.push(f);
+    else if (info) toast(`${f.name}: ${info.reason}`, "error");
+    else toast(`${f.name}: 지원하지 않는 형식입니다.`, "error");
+  });
+  if (!valid.length) return;
+
+  const fd = new FormData();
+  valid.forEach(f => fd.append("files", f));
+  toast(valid.length + "개 파일 업로드 중…", "info");
+  try {
+    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    const data = await res.json().catch(() => ({}));
+    if (data.saved && data.saved.length) toast(data.saved.length + "개 파일을 작업전에 넣었습니다.", "ok");
+    (data.rejected || []).forEach(item => toast(`${item.name}: ${item.reason}`, "error"));
+    if (!res.ok) toast(data.error || "업로드에 실패했습니다.", "error");
+  } catch {
+    toast("업로드 중 네트워크 오류가 발생했습니다.", "error");
+  }
+  refresh();
+}
+
+const dropCard = $("dropCard");
+const dropArea = $("dropArea");
+const fileInput = $("fileInput");
+let dragDepth = 0;
+
+dropArea.addEventListener("click", () => fileInput.click());
+dropArea.addEventListener("keydown", e => {
+  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); }
+});
+fileInput.addEventListener("change", () => {
+  uploadFiles(fileInput.files);
+  fileInput.value = "";
+});
+
+dropCard.addEventListener("dragenter", e => {
+  e.preventDefault();
+  dragDepth++;
+  dropCard.classList.add("drag-over");
+});
+dropCard.addEventListener("dragover", e => e.preventDefault());
+dropCard.addEventListener("dragleave", () => {
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (dragDepth === 0) dropCard.classList.remove("drag-over");
+});
+dropCard.addEventListener("drop", e => {
+  e.preventDefault();
+  dragDepth = 0;
+  dropCard.classList.remove("drag-over");
+  uploadFiles(e.dataTransfer.files);
+});
+
+["dragover", "drop"].forEach(evt => window.addEventListener(evt, e => e.preventDefault()));
+
+refresh();
+setInterval(refresh, 1500);
+</script>
+</body>
+</html>
