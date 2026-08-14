@@ -46,8 +46,13 @@ class Pipeline:
     def output(self):
         return self.root / self.cfg["output_name"]
 
+    @property
+    def redact_dir(self):
+        """치환 리포트와 원문 매핑이 쌓이는 곳. 치환본(.masked.md)은 마크다운 폴더에 둔다."""
+        return self.root / self.cfg.get("redact_name", "치환기록")
+
     def _ensure_dirs(self):
-        for d in (self.inbox, self.done, self.failed_dir, self.output):
+        for d in (self.inbox, self.done, self.failed_dir, self.output, self.redact_dir):
             d.mkdir(parents=True, exist_ok=True)
 
     def log(self, level, message):
@@ -218,6 +223,7 @@ class Pipeline:
                 "done": str(self.done),
                 "failed": str(self.failed_dir),
                 "output": str(self.output),
+                "redact": str(self.redact_dir),
             },
         }
 

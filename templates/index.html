@@ -239,6 +239,26 @@
 
   li.file .name { flex: 1; min-width: 0; font-size: 13px; font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   li.file .meta { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+  /* 목록에서 바로 누르는 개인정보 치환 버튼 */
+  li.file .rbtn {
+    flex: none; display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 10px; border-radius: 999px; border: 1px solid rgba(41, 179, 137, .28);
+    background: var(--mint-soft); color: var(--mint-strong);
+    font-family: var(--font-kr); font-size: 11.5px; font-weight: 600; cursor: pointer;
+    transition: transform .18s var(--ease-spring), box-shadow .2s ease, background .2s ease;
+  }
+  li.file .rbtn .icon { width: 13px; height: 13px; }
+  li.file .rbtn:hover { background: #fff; box-shadow: 0 4px 12px rgba(41, 179, 137, .22); }
+  li.file .rbtn:active { transform: scale(.93); }
+  li.file .rbtn[disabled] { opacity: .5; cursor: default; box-shadow: none; }
+  li.file .rbtn.busy { color: var(--slate-strong); background: var(--slate-soft); border-color: rgba(123, 135, 148, .25); }
+  li.file .rflag {
+    flex: none; padding: 4px 10px; border-radius: 999px;
+    background: var(--slate-soft); color: var(--slate-strong);
+    font-size: 11.5px; font-weight: 600; white-space: nowrap;
+  }
+  li.file.masked .fico { background: var(--mint-soft); color: var(--mint-strong); }
+
   li.file .trail { flex: none; color: var(--muted); }
   li.file .trail .icon { width: 15px; height: 15px; }
   li.file.clickable:hover .trail { color: var(--sky-strong); }
@@ -355,6 +375,39 @@
   dialog::backdrop { background: rgba(20, 30, 45, .35); backdrop-filter: blur(4px); }
   dialog .dhead { display: flex; justify-content: space-between; align-items: center; padding: 18px 22px; border-bottom: 1px solid rgba(140, 170, 200, .15); }
   dialog h3 { font-family: var(--font-display); margin: 0; font-size: 15px; font-weight: 600; }
+  /* 미리보기 아래 치환 영역 */
+  dialog .dfoot {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 14px 22px; border-top: 1px solid rgba(140, 170, 200, .15);
+    background: rgba(255, 255, 255, .5);
+  }
+  dialog .dfoot .spacer { flex: 1 1 auto; }
+  .rstat { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; }
+  .rchip {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 999px;
+    font-weight: 600; font-size: 12px;
+  }
+  .rchip.auto { color: var(--mint-strong); background: var(--mint-soft); }
+  .rchip.review { color: var(--coral-strong); background: var(--coral-soft); }
+  .rchip.clean { color: var(--slate-strong); background: var(--slate-soft); }
+  .rchip.wait { color: var(--slate-strong); background: var(--slate-soft); }
+  .rnote { color: var(--muted); font-size: 12px; }
+  .rcheck { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-soft); cursor: pointer; }
+  .rcheck input { accent-color: var(--sky-strong); }
+  .btn.solid {
+    background: linear-gradient(120deg, var(--sky-strong), var(--mint-strong));
+    color: #fff; box-shadow: 0 6px 18px rgba(90, 170, 210, .32);
+  }
+  .btn.solid:hover { box-shadow: var(--shadow-lift); }
+  .btn[disabled] { opacity: .45; cursor: not-allowed; box-shadow: none; }
+  .rlist {
+    margin: 0; padding: 10px 22px 16px; list-style: none; max-height: 22vh; overflow: auto;
+    border-top: 1px dashed rgba(140, 170, 200, .25); background: rgba(255, 255, 255, .4);
+  }
+  .rlist li { display: flex; gap: 8px; align-items: baseline; font-size: 12.5px; color: var(--ink-soft); padding: 3px 0; }
+  .rlist .tag { flex: none; font-weight: 600; color: var(--coral-strong); font-size: 11.5px; }
+  .rlist .ctx { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); word-break: break-all; }
+
   dialog pre { margin: 0; padding: 22px; max-height: 64vh; overflow: auto; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.75; white-space: pre-wrap; color: var(--ink-soft); }
   .icon-btn {
     width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; border: none; cursor: pointer;
@@ -394,6 +447,7 @@
   <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1.1" fill="currentColor" stroke="none"/></symbol>
   <symbol id="i-alert-triangle" viewBox="0 0 24 24"><path d="M10.6 4.2 2.9 18a1.8 1.8 0 0 0 1.6 2.7h15a1.8 1.8 0 0 0 1.6-2.7L13.4 4.2a1.8 1.8 0 0 0-2.8 0Z"/><path d="M12 9.5v4"/><circle cx="12" cy="17" r="1" fill="currentColor" stroke="none"/></symbol>
   <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.2-2.9 7.8-7 9-4.1-1.2-7-4.8-7-9V6l7-3Z"/><path d="m9 12 2 2 4-4"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
   <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h13M21 18h-1"/><circle cx="13" cy="6" r="2"/><circle cx="7" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></symbol>
   <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/></symbol>
@@ -545,6 +599,19 @@
     <button id="vClose" class="icon-btn" aria-label="닫기"><svg class="icon"><use href="#i-x"/></svg></button>
   </div>
   <pre id="vBody"></pre>
+  <ul class="rlist" id="rList" hidden></ul>
+  <div class="dfoot">
+    <div class="rstat" id="rStat">
+      <span class="rchip wait">개인정보 확인 중…</span>
+    </div>
+    <span class="spacer"></span>
+    <label class="rcheck" title="주소·단독 이름처럼 확실하지 않은 항목까지 함께 치환합니다">
+      <input type="checkbox" id="rReview"> 확인필요 항목까지
+    </label>
+    <button id="rApply" class="btn solid" disabled>
+      <svg class="icon"><use href="#i-shield"/></svg>개인정보 치환
+    </button>
+  </div>
 </dialog>
 
 <div class="toast-stack" id="toasts"></div>
@@ -609,13 +676,38 @@ function row(f, baseType, icon, clickable) {
   const meta = document.createElement("span");
   meta.className = "meta";
   li.append(fico, name, tag, meta);
+
+  /* 마크다운 결과에는 목록에서 바로 누를 수 있는 치환 버튼을 단다.
+     이미 치환된 파일(.masked.md)은 버튼 대신 표식만 보여준다. */
   if (baseType === "md") {
+    if (isMaskedName(f.name)) {
+      li.classList.add("masked");
+      const flag = document.createElement("span");
+      flag.className = "rflag";
+      flag.textContent = "치환본";
+      li.appendChild(flag);
+    } else {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "rbtn";
+      btn.title = "자연인 정보를 치환한 사본을 새로 만듭니다. 원본은 그대로 둡니다.";
+      btn.innerHTML = `<svg class="icon"><use href="#i-shield"/></svg>개인정보 치환`;
+      btn.addEventListener("click", ev => {
+        ev.stopPropagation();      // 행 클릭(미리보기)과 겹치지 않게
+        redactFromList(f.name, btn);
+      });
+      li.appendChild(btn);
+    }
     const trail = document.createElement("span");
     trail.className = "trail";
     trail.innerHTML = `<svg class="icon"><use href="#i-eye"/></svg>`;
     li.appendChild(trail);
   }
   return li;
+}
+
+function isMaskedName(name) {
+  return /\.masked\.md$/i.test(name);
 }
 
 function updateRow(li, f, working) {
@@ -720,13 +812,158 @@ function renderFormats() {
   $("cFormats").textContent = formats.filter(f => f.available).length;
 }
 
+/* ---------- 미리보기 + 개인정보 치환 ----------
+   원본 마크다운은 절대 덮어쓰지 않는다. 치환본은 <이름>.masked.md 로 따로 저장되고,
+   탐지 내역과 원문 매핑은 치환기록 폴더에 남는다.                                */
+let viewing = null;   // 지금 보고 있는 파일 이름
+
 async function preview(name) {
   const res = await fetch("/api/preview?name=" + encodeURIComponent(name));
   if (!res.ok) { toast("미리보기를 불러오지 못했습니다.", "error"); return; }
   const data = await res.json();
+  viewing = data.name;
   $("vTitle").textContent = data.name;
   $("vBody").textContent = data.text;
+  resetRedactPanel();
   $("viewer").showModal();
+  scanRedact(data.name);
+}
+
+function chip(kind, text) {
+  const el = document.createElement("span");
+  el.className = "rchip " + kind;
+  el.textContent = text;
+  return el;
+}
+
+function resetRedactPanel() {
+  $("rStat").replaceChildren(chip("wait", "개인정보 확인 중…"));
+  $("rApply").disabled = true;
+  $("rReview").checked = false;
+  $("rList").hidden = true;
+  $("rList").replaceChildren();
+}
+
+async function scanRedact(name) {
+  let data;
+  try {
+    const res = await fetch("/api/redact/scan?name=" + encodeURIComponent(name));
+    if (!res.ok) throw new Error();
+    data = await res.json();
+  } catch {
+    $("rStat").replaceChildren(chip("clean", "개인정보 검사를 하지 못했습니다"));
+    return;
+  }
+  if (viewing !== name) return;   // 그새 다른 파일을 열었으면 무시
+
+  const stat = $("rStat");
+  if (data.already_masked) {
+    stat.replaceChildren(chip("clean", "이미 치환된 파일입니다"));
+    $("rApply").disabled = true;
+    return;
+  }
+
+  const { auto, review, names } = data.summary;
+  const parts = [];
+  if (auto) parts.push(chip("auto", "자동 치환 " + auto + "건"));
+  if (names) parts.push(chip("clean", "그중 이름 " + names + "건"));
+  if (review) parts.push(chip("review", "확인필요 " + review + "건"));
+  if (!auto && !review) parts.push(chip("clean", "찾은 개인정보 없음"));
+
+  const note = document.createElement("span");
+  note.className = "rnote";
+  note.textContent = (auto || review)
+    ? "원본은 그대로 두고 " + name.replace(/\.md$/, "") + ".masked.md 로 따로 저장됩니다."
+    : "규칙에 걸린 항목이 없습니다. 그래도 최종 확인은 사람이 해야 합니다.";
+  parts.push(note);
+  stat.replaceChildren(...parts);
+
+  $("rApply").disabled = !(auto || review);
+
+  /* 확인필요 항목은 왜 애매한지 보여줘야 사람이 판단할 수 있다 */
+  const list = $("rList");
+  const reviews = (data.findings || []).filter(f => f.confidence === "REVIEW");
+  if (reviews.length) {
+    list.replaceChildren(...reviews.slice(0, 40).map(f => {
+      const li = document.createElement("li");
+      const tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = "확인필요 · " + f.label + " (" + f.line + "행)";
+      const ctx = document.createElement("span");
+      ctx.className = "ctx";
+      ctx.textContent = f.context || "";
+      li.append(tag, ctx);
+      return li;
+    }));
+    list.hidden = false;
+  } else {
+    list.hidden = true;
+  }
+}
+
+/* 목록에서 바로 치환. 누를 때마다 그 시점 원본을 다시 읽어 새로 만든다.
+   이미 .masked.md 가 있으면 덮어쓴다 — 규칙을 고친 뒤 다시 누르면 갱신된다. */
+async function redactFromList(name, btn) {
+  const label = btn.innerHTML;
+  btn.disabled = true;
+  btn.classList.add("busy");
+  btn.textContent = "치환 중…";
+  try {
+    const res = await fetch("/api/redact/apply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, include_review: false }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || "");
+
+    if (data.applied === 0) {
+      toast(name + " — 찾은 개인정보가 없어 원본과 같은 사본을 만들었습니다.", "info");
+    } else {
+      toast(data.masked + " 저장 완료 (치환 " + data.applied + "건"
+            + (data.review_left ? " · 확인필요 " + data.review_left + "건 남김" : "") + ")", "ok");
+    }
+    if (data.review_left) {
+      toast("확인필요 항목은 파일을 눌러 미리보기에서 확인하세요.", "info");
+    }
+    refresh();
+  } catch (err) {
+    toast(err.message || "치환에 실패했습니다.", "error");
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove("busy");
+    btn.innerHTML = label;
+  }
+}
+
+async function applyRedact() {
+  const name = viewing;
+  if (!name) return;
+  const btn = $("rApply");
+  btn.disabled = true;
+  try {
+    const res = await fetch("/api/redact/apply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, include_review: $("rReview").checked }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || "");
+
+    $("vTitle").textContent = data.masked;
+    $("vBody").textContent = data.text;
+    viewing = data.masked;
+    $("rStat").replaceChildren(
+      chip("auto", "치환 " + data.applied + "건 완료"),
+      ...(data.review_left ? [chip("review", "확인필요 " + data.review_left + "건 남김")] : []),
+    );
+    $("rList").hidden = true;
+    toast(data.masked + " 저장 완료 (치환 " + data.applied + "건)", "ok");
+    refresh();
+  } catch (err) {
+    toast(err.message || "치환에 실패했습니다.", "error");
+    btn.disabled = false;
+  }
 }
 
 async function refresh() {
@@ -844,6 +1081,8 @@ $("maxRows").addEventListener("keydown", e => {
 });
 
 $("vClose").addEventListener("click", () => $("viewer").close());
+$("rApply").addEventListener("click", applyRedact);
+$("viewer").addEventListener("close", () => { viewing = null; });
 
 /* ---------- drag & drop upload ---------- */
 async function uploadFiles(fileList) {
